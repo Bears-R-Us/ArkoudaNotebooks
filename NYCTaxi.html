@@ -13077,7 +13077,24 @@ div#notebook {
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h1 id="Pandas-and-Arkouda">Pandas and Arkouda<a class="anchor-link" href="#Pandas-and-Arkouda">&#182;</a></h1><p>read csv into pandas and then look at it then put some data frame columns into arkouda</p>
+<h1 id="Using-New-York-City-Taxi-Data-to-illistrate-using-Arkouda-with-Pandas/NumPy">Using New York City Taxi Data to illistrate using Arkouda with Pandas/NumPy<a class="anchor-link" href="#Using-New-York-City-Taxi-Data-to-illistrate-using-Arkouda-with-Pandas/NumPy">&#182;</a></h1><p>This notebook shows some examples of how to interoperate between Pandas and Arkouda at a small scale to allow it to be run on a 16GB laptop.
+Remember, Arkouda is not trying to replace Pandas but to allow for some Pandas-style operation at a much larger scale. In our experience Pandas can handle dataframes up to about <strong>500 million rows</strong> before performance becomes a real issue, this is provided that you run on a sufficently capable compute server. Arkouda breaks the shared memory paradigm and scales its operations to dataframes with over <strong>200 billion rows</strong>, maybe even a trillion. In practice we have run Arkouda server operations on columns of one trillion elements running on 512 compute nodes. This yielded a <strong>&gt;20TB dataframe</strong> in Arkouda.</p>
+<ul>
+<li>Import Arkouda package and connect to the Arkouda server</li>
+<li>import other useful packages</li>
+<li>Define some python helper functions for ETL (Extract/Transform/Load)</li>
+<li>Define a python function to transfer dataframes from Pandas to Arkouda</li>
+<li>Read NYC taxi csv into Pandas</li>
+<li>Put dataframe columns into the Arkouda server</li>
+<li>Compute taxi ride duration in Pandas, compute histogram</li>
+<li>Compute taxi ride duration in Arkouda, compute histogram, currently dosen't match exactly to Pandas due to some misunderstanding about Pandas timestamp processing</li>
+<li>Compute something with trip distance in Pandas</li>
+<li>Compute the same computation in Arkouda</li>
+<li>Read NYC Taxi Zone Lookup Table (tzlut) into Pandas</li>
+<li>Transfer tzlut to Arkouda</li>
+<li>Compute something with Groupby/aggregate in Pandas</li>
+<li>Compute something with Groupby/aggregate in Arkouda</li>
+</ul>
 <h2 id="New-York-City-Taxi-Data">New York City Taxi Data<a class="anchor-link" href="#New-York-City-Taxi-Data">&#182;</a></h2><p><a href="https://www1.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_yellow.pdf">Yellow Trips Data Dictionary</a></p>
 <p><a href="https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2020-01.csv">NYC Yellow Taxi Trip Records Jan 2020</a></p>
 <p><a href="https://www1.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_green.pdf">Green Trips Data Dictionary</a></p>
@@ -13121,7 +13138,7 @@ div#notebook {
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[3]:</div>
+<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
 <div class="inner_cell">
     <div class="input_area">
 <div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># conversion from csv field to int64</span>
@@ -13150,8 +13167,19 @@ div#notebook {
         <span class="k">return</span> <span class="kc">True</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">False</span>
+</pre></div>
 
-<span class="c1"># check all objects in iterable for instance of str</span>
+    </div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[23]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># check all objects in iterable for instance of str</span>
 <span class="c1"># this is a crutch to get a pandas column of str into Arkouda</span>
 <span class="k">def</span> <span class="nf">is_all_str</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
     <span class="n">ret</span> <span class="o">=</span> <span class="kc">True</span>
@@ -13571,55 +13599,6 @@ div#notebook {
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[7]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="n">ride_duration</span> <span class="o">=</span> <span class="n">ydf</span><span class="p">[</span><span class="s1">&#39;tpep_dropoff_datetime&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">ydf</span><span class="p">[</span><span class="s1">&#39;tpep_pickup_datetime&#39;</span><span class="p">]</span>
-<span class="c1"># pull out ride duration in minutes</span>
-<span class="n">ride_duration</span> <span class="o">=</span> <span class="n">ride_duration</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">seconds</span> <span class="o">/</span> <span class="mi">60</span> <span class="c1"># in minutes</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;min = &quot;</span><span class="p">,</span> <span class="n">ride_duration</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span><span class="s2">&quot;max = &quot;</span><span class="p">,</span> <span class="n">ride_duration</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;mean = &quot;</span><span class="p">,</span><span class="n">ride_duration</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span><span class="s2">&quot;stdev = &quot;</span><span class="p">,</span><span class="n">ride_duration</span><span class="o">.</span><span class="n">std</span><span class="p">(),</span><span class="s2">&quot;median =&quot;</span><span class="p">,</span><span class="n">ride_duration</span><span class="o">.</span><span class="n">median</span><span class="p">())</span>
-<span class="c1"># how long was the maximum ride to the next integer minute</span>
-<span class="n">max_ride</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">ride_duration</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
-<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;max_ride = &quot;</span><span class="p">,</span> <span class="n">max_ride</span><span class="p">)</span>
-
-<span class="c1"># histogram the ride time bin by the minute</span>
-<span class="n">nBins</span> <span class="o">=</span> <span class="n">max_ride</span>
-<span class="n">cnts</span><span class="p">,</span><span class="n">bin_edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">ride_duration</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">nBins</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">cnts</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>     <span class="s2">&quot;cnts      = &quot;</span><span class="p">,</span> <span class="n">cnts</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">bin_edges</span><span class="o">.</span><span class="n">size</span><span class="p">,</span><span class="s2">&quot;bin edges = &quot;</span><span class="p">,</span> <span class="n">bin_edges</span><span class="p">)</span>
-</pre></div>
-
-    </div>
-</div>
-</div>
-
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-    <div class="prompt"></div>
-
-
-<div class="output_subarea output_stream output_stdout output_text">
-<pre>min =  0.0 max =  1439.9333333333334
-mean =  15.945356643839302 stdev =  62.95207310860566 median = 10.483333333333333
-max_ride =  1440
-1440 cnts      =  [ 68565  79315 192810 ...    680    662    204]
-1441 bin edges =  [0.00000000e+00 9.99953704e-01 1.99990741e+00 ... 1.43793343e+03
- 1.43893338e+03 1.43993333e+03]
-</pre>
-</div>
-</div>
-
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
 <div class="prompt input_prompt">In&nbsp;[8]:</div>
 <div class="inner_cell">
     <div class="input_area">
@@ -13662,6 +13641,137 @@ total_amount  :  float64 -&gt; float64
 congestion_surcharge  :  float64 -&gt; float64
 </pre>
 </div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[15]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># which keys made it over to the server</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">akdict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>dict_keys([&#39;VendorID&#39;, &#39;tpep_pickup_datetime&#39;, &#39;tpep_dropoff_datetime&#39;, &#39;passenger_count&#39;, &#39;trip_distance&#39;, &#39;RatecodeID&#39;, &#39;store_and_fwd_flag&#39;, &#39;PULocationID&#39;, &#39;DOLocationID&#39;, &#39;payment_type&#39;, &#39;fare_amount&#39;, &#39;extra&#39;, &#39;mta_tax&#39;, &#39;tip_amount&#39;, &#39;tolls_amount&#39;, &#39;improvement_surcharge&#39;, &#39;total_amount&#39;, &#39;congestion_surcharge&#39;])
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[14]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">gc</span><span class="o">.</span><span class="n">garbage</span><span class="p">)</span>
+<span class="n">gc</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+<span class="c1"># print out the arkouda server symbol table</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ak</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">ak</span><span class="o">.</span><span class="n">AllSymbols</span><span class="p">))</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>[]
+name:&#34;id_12&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
+name:&#34;id_13&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
+name:&#34;id_10&#34; dtype:&#34;int64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
+name:&#34;id_11&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
+name:&#34;id_39&#34; dtype:&#34;int64&#34; size:8526 ndim:1 shape:(8526) itemsize:8
+name:&#34;id_7&#34; dtype:&#34;bool&#34; size:6405008 ndim:1 shape:(6405008) itemsize:1
+name:&#34;id_6&#34; dtype:&#34;int64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
+name:&#34;id_5&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
+name:&#34;id_4&#34; dtype:&#34;int64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
+name:&#34;id_3&#34; dtype:&#34;int64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
+name:&#34;id_2&#34; dtype:&#34;int64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
+name:&#34;id_1&#34; dtype:&#34;int64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
+name:&#34;id_18&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
+name:&#34;id_9&#34; dtype:&#34;int64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
+name:&#34;id_8&#34; dtype:&#34;int64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
+name:&#34;id_36&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
+name:&#34;id_16&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
+name:&#34;id_17&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
+name:&#34;id_14&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
+name:&#34;id_15&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
+
+</pre>
+</div>
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">In&nbsp;[16]:</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># how many records made it to the server?</span>
+<span class="n">numTotal</span> <span class="o">=</span> <span class="n">akdict</span><span class="p">[</span><span class="s1">&#39;tpep_pickup_datetime&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span>
+
+<span class="c1"># use the store_and_forward column to index tpep_pickup_datetime</span>
+<span class="c1"># see how many time was false</span>
+<span class="n">numFalse</span> <span class="o">=</span> <span class="n">akdict</span><span class="p">[</span><span class="s1">&#39;tpep_pickup_datetime&#39;</span><span class="p">][</span><span class="o">~</span><span class="n">akdict</span><span class="p">[</span><span class="s1">&#39;store_and_fwd_flag&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">size</span>
+
+<span class="c1"># use the store_and_forward column to index tpep_pickup_datetime</span>
+<span class="c1"># see how many time was true</span>
+<span class="n">numTrue</span> <span class="o">=</span> <span class="n">akdict</span><span class="p">[</span><span class="s1">&#39;tpep_pickup_datetime&#39;</span><span class="p">][</span><span class="n">akdict</span><span class="p">[</span><span class="s1">&#39;store_and_fwd_flag&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">size</span>
+
+<span class="n">numTotal</span> <span class="o">==</span> <span class="n">numFalse</span><span class="o">+</span><span class="n">numTrue</span>
+</pre></div>
+
+    </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt output_prompt">Out[16]:</div>
+
+
+
+
+<div class="output_text output_subarea output_execute_result">
+<pre>True</pre>
+</div>
+
 </div>
 
 </div>
@@ -13731,18 +13841,49 @@ congestion_surcharge  :  float64 -&gt; float64
 </div>
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
-<div class="prompt input_prompt">In&nbsp;[10]:</div>
+<div class="prompt input_prompt">In&nbsp;[7]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">ak_time_diff</span><span class="p">(</span><span class="n">t0</span><span class="p">,</span><span class="n">t1</span><span class="p">,</span><span class="n">low</span><span class="p">,</span><span class="n">high</span><span class="p">):</span>
-    <span class="n">t_low</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">low</span><span class="p">)</span><span class="o">.</span><span class="n">to_datetime64</span><span class="p">())</span>
-    <span class="n">t_high</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">high</span><span class="p">)</span><span class="o">.</span><span class="n">to_datetime64</span><span class="p">())</span>
-    <span class="k">return</span> <span class="n">ak</span><span class="o">.</span><span class="n">where</span><span class="p">(((</span><span class="n">t0</span> <span class="o">&lt;=</span> <span class="n">t_high</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">t0</span> <span class="o">&gt;=</span> <span class="n">t_low</span><span class="p">)</span>
-                     <span class="o">&amp;</span> <span class="p">(</span><span class="n">t1</span> <span class="o">&lt;=</span> <span class="n">t_high</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">t1</span> <span class="o">&gt;=</span> <span class="n">t_low</span><span class="p">)</span>
-                     <span class="o">&amp;</span> <span class="p">(</span><span class="n">t1</span> <span class="o">&gt;=</span> <span class="n">t0</span><span class="p">)),</span> <span class="n">t1</span> <span class="o">-</span> <span class="n">t0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="n">ride_duration</span> <span class="o">=</span> <span class="n">ydf</span><span class="p">[</span><span class="s1">&#39;tpep_dropoff_datetime&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">ydf</span><span class="p">[</span><span class="s1">&#39;tpep_pickup_datetime&#39;</span><span class="p">]</span>
+<span class="c1"># pull out ride duration in minutes</span>
+<span class="n">ride_duration</span> <span class="o">=</span> <span class="n">ride_duration</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">seconds</span> <span class="o">/</span> <span class="mi">60</span> <span class="c1"># in minutes</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;min = &quot;</span><span class="p">,</span> <span class="n">ride_duration</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span><span class="s2">&quot;max = &quot;</span><span class="p">,</span> <span class="n">ride_duration</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;mean = &quot;</span><span class="p">,</span><span class="n">ride_duration</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span><span class="s2">&quot;stdev = &quot;</span><span class="p">,</span><span class="n">ride_duration</span><span class="o">.</span><span class="n">std</span><span class="p">(),</span><span class="s2">&quot;median =&quot;</span><span class="p">,</span><span class="n">ride_duration</span><span class="o">.</span><span class="n">median</span><span class="p">())</span>
+<span class="c1"># how long was the maximum ride to the next integer minute</span>
+<span class="n">max_ride</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">ride_duration</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;max_ride = &quot;</span><span class="p">,</span> <span class="n">max_ride</span><span class="p">)</span>
+
+<span class="c1"># histogram the ride time bin by the minute</span>
+<span class="n">nBins</span> <span class="o">=</span> <span class="n">max_ride</span>
+<span class="n">cnts</span><span class="p">,</span><span class="n">bin_edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">ride_duration</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="n">nBins</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">cnts</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>     <span class="s2">&quot;cnts      = &quot;</span><span class="p">,</span> <span class="n">cnts</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">bin_edges</span><span class="o">.</span><span class="n">size</span><span class="p">,</span><span class="s2">&quot;bin edges = &quot;</span><span class="p">,</span> <span class="n">bin_edges</span><span class="p">)</span>
 </pre></div>
 
     </div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area">
+
+    <div class="prompt"></div>
+
+
+<div class="output_subarea output_stream output_stdout output_text">
+<pre>min =  0.0 max =  1439.9333333333334
+mean =  15.945356643839302 stdev =  62.95207310860566 median = 10.483333333333333
+max_ride =  1440
+1440 cnts      =  [ 68565  79315 192810 ...    680    662    204]
+1441 bin edges =  [0.00000000e+00 9.99953704e-01 1.99990741e+00 ... 1.43793343e+03
+ 1.43893338e+03 1.43993333e+03]
+</pre>
+</div>
+</div>
+
 </div>
 </div>
 
@@ -13752,7 +13893,14 @@ congestion_surcharge  :  float64 -&gt; float64
 <div class="prompt input_prompt">In&nbsp;[11]:</div>
 <div class="inner_cell">
     <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">ns_to_min</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+<div class=" highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">ak_time_diff</span><span class="p">(</span><span class="n">t0</span><span class="p">,</span><span class="n">t1</span><span class="p">,</span><span class="n">low</span><span class="p">,</span><span class="n">high</span><span class="p">):</span>
+    <span class="n">t_low</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">low</span><span class="p">)</span><span class="o">.</span><span class="n">to_datetime64</span><span class="p">())</span>
+    <span class="n">t_high</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="n">high</span><span class="p">)</span><span class="o">.</span><span class="n">to_datetime64</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">ak</span><span class="o">.</span><span class="n">where</span><span class="p">(((</span><span class="n">t0</span> <span class="o">&lt;=</span> <span class="n">t_high</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">t0</span> <span class="o">&gt;=</span> <span class="n">t_low</span><span class="p">)</span>
+                     <span class="o">&amp;</span> <span class="p">(</span><span class="n">t1</span> <span class="o">&lt;=</span> <span class="n">t_high</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">t1</span> <span class="o">&gt;=</span> <span class="n">t_low</span><span class="p">)</span>
+                     <span class="o">&amp;</span> <span class="p">(</span><span class="n">t1</span> <span class="o">&gt;=</span> <span class="n">t0</span><span class="p">)),</span> <span class="n">t1</span> <span class="o">-</span> <span class="n">t0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">ns_to_min</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
     <span class="k">return</span> <span class="p">(</span><span class="n">v</span> <span class="o">/</span> <span class="p">(</span><span class="mf">1e9</span> <span class="o">*</span> <span class="mf">60.0</span><span class="p">))</span>
 </pre></div>
 
@@ -13898,137 +14046,6 @@ max_ride =  8526
 <img src="data:image/png;base64,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
 "
 >
-</div>
-
-</div>
-
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[14]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">gc</span><span class="o">.</span><span class="n">garbage</span><span class="p">)</span>
-<span class="n">gc</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
-<span class="c1"># print out the arkouda server symbol table</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">ak</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">ak</span><span class="o">.</span><span class="n">AllSymbols</span><span class="p">))</span>
-</pre></div>
-
-    </div>
-</div>
-</div>
-
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-    <div class="prompt"></div>
-
-
-<div class="output_subarea output_stream output_stdout output_text">
-<pre>[]
-name:&#34;id_12&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
-name:&#34;id_13&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
-name:&#34;id_10&#34; dtype:&#34;int64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
-name:&#34;id_11&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
-name:&#34;id_39&#34; dtype:&#34;int64&#34; size:8526 ndim:1 shape:(8526) itemsize:8
-name:&#34;id_7&#34; dtype:&#34;bool&#34; size:6405008 ndim:1 shape:(6405008) itemsize:1
-name:&#34;id_6&#34; dtype:&#34;int64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
-name:&#34;id_5&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
-name:&#34;id_4&#34; dtype:&#34;int64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
-name:&#34;id_3&#34; dtype:&#34;int64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
-name:&#34;id_2&#34; dtype:&#34;int64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
-name:&#34;id_1&#34; dtype:&#34;int64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
-name:&#34;id_18&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
-name:&#34;id_9&#34; dtype:&#34;int64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
-name:&#34;id_8&#34; dtype:&#34;int64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
-name:&#34;id_36&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
-name:&#34;id_16&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
-name:&#34;id_17&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
-name:&#34;id_14&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
-name:&#34;id_15&#34; dtype:&#34;float64&#34; size:6405008 ndim:1 shape:(6405008) itemsize:8
-
-</pre>
-</div>
-</div>
-
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[15]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># which keys made it over to the server</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">akdict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-</pre></div>
-
-    </div>
-</div>
-</div>
-
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-    <div class="prompt"></div>
-
-
-<div class="output_subarea output_stream output_stdout output_text">
-<pre>dict_keys([&#39;VendorID&#39;, &#39;tpep_pickup_datetime&#39;, &#39;tpep_dropoff_datetime&#39;, &#39;passenger_count&#39;, &#39;trip_distance&#39;, &#39;RatecodeID&#39;, &#39;store_and_fwd_flag&#39;, &#39;PULocationID&#39;, &#39;DOLocationID&#39;, &#39;payment_type&#39;, &#39;fare_amount&#39;, &#39;extra&#39;, &#39;mta_tax&#39;, &#39;tip_amount&#39;, &#39;tolls_amount&#39;, &#39;improvement_surcharge&#39;, &#39;total_amount&#39;, &#39;congestion_surcharge&#39;])
-</pre>
-</div>
-</div>
-
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[16]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span><span class="c1"># how many records made it to the server?</span>
-<span class="n">numTotal</span> <span class="o">=</span> <span class="n">akdict</span><span class="p">[</span><span class="s1">&#39;tpep_pickup_datetime&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">size</span>
-
-<span class="c1"># use the store_and_forward column to index tpep_pickup_datetime</span>
-<span class="c1"># see how many time was false</span>
-<span class="n">numFalse</span> <span class="o">=</span> <span class="n">akdict</span><span class="p">[</span><span class="s1">&#39;tpep_pickup_datetime&#39;</span><span class="p">][</span><span class="o">~</span><span class="n">akdict</span><span class="p">[</span><span class="s1">&#39;store_and_fwd_flag&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">size</span>
-
-<span class="c1"># use the store_and_forward column to index tpep_pickup_datetime</span>
-<span class="c1"># see how many time was true</span>
-<span class="n">numTrue</span> <span class="o">=</span> <span class="n">akdict</span><span class="p">[</span><span class="s1">&#39;tpep_pickup_datetime&#39;</span><span class="p">][</span><span class="n">akdict</span><span class="p">[</span><span class="s1">&#39;store_and_fwd_flag&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">size</span>
-
-<span class="n">numTotal</span> <span class="o">==</span> <span class="n">numFalse</span><span class="o">+</span><span class="n">numTrue</span>
-</pre></div>
-
-    </div>
-</div>
-</div>
-
-<div class="output_wrapper">
-<div class="output">
-
-
-<div class="output_area">
-
-    <div class="prompt output_prompt">Out[16]:</div>
-
-
-
-
-<div class="output_text output_subarea output_execute_result">
-<pre>True</pre>
 </div>
 
 </div>
