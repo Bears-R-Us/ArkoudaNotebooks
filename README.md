@@ -1,5 +1,5 @@
 # ArkoudaNotebooks
-This is a place for notebooks and example uses of the [Arkouda](https://github.com/mhmerrill/arkoudasoftware package)
+This is a place for notebooks and example uses of the [Arkouda](https://github.com/mhmerrill/arkouda) software package
 
 Use `nbstripout` to strip ouput from notebooks before checking them into this repo.
 
